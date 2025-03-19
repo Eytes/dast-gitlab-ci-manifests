@@ -1,6 +1,6 @@
 variables:
   ZAP_TAG: 2.16.0
-  TARGET_URL: ${TARGET_URL:-"https://burgerkingrus.ru"}
+  TARGET_URL: ${TARGET_URL:-"your_site"}
 
 
 .general_dast_settings:
