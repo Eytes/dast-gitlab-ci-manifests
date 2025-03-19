@@ -1,0 +1,57 @@
+variables:
+  ZAP_TAG: 2.16.0
+  TARGET_URL: ${TARGET_URL:-"https://burgerkingrus.ru"}
+
+
+.general_dast_settings:
+  stage: DAST
+  tags:
+    - dast
+  allow_failure: true
+  interruptible: true
+
+
+.zap_prepare:
+  extends:
+    - .general_dast_settings
+  before_script:
+    - mkdir -p /zap/wrk
+
+
+zap_passive_scan:
+  extends:
+    - .zap_prepare
+  image: zaproxy/zap-stable:${ZAP_TAG}
+  script:
+    - zap.sh -cmd -addoninstall "communityScripts"  # "Community Scripts"
+    - zap-baseline.py -t "${TARGET_URL}" -I -m 3 -j -J passive_zap_report.json
+    - mv /zap/wrk/passive_zap_report.json $CI_PROJECT_DIR/passive_zap_report.json
+  artifacts:
+    paths:
+      - passive_zap_report.json
+    expire_in: 1 week
+
+
+zap_active_scan:
+  extends:
+    - .zap_prepare
+  image: zaproxy/zap-stable:${ZAP_TAG}
+  script:
+    - zap.sh -cmd -addoninstall "sqliplugin"  # "Advanced SQLInjection Scanner"
+    - zap.sh -cmd -addoninstall "fuzzdb"  # "FuzzDB Files"
+    - zap.sh -cmd -addoninstall "fuzzai"  # "FuzzAI Files"
+    - zap.sh -cmd -addoninstall "fuzzdboffensive"  # "FuzzDB Offensive"
+    - zap.sh -cmd -addoninstall "jwt"  # "JWT Support"
+    - zap.sh -cmd -addoninstall "directorylistv2_3"  # "Directory List v2.3"
+    - zap.sh -cmd -addoninstall "grpc"  # "gRPC Support"
+    - zap.sh -cmd -addoninstall "attacksurfacedetector"  # "Attack Surface Detector"
+    - zap.sh -cmd -addoninstall "saml"  # "SAML Support"
+    - zap.sh -cmd -addoninstall "communityScripts"  # "Community Scripts"
+    - zap.sh -cmd -addoninstall "paramdigger"  # "Parameter Digger"
+    - zap.sh -cmd -addoninstall "tokengen"  # "Token Generation and Analysis"
+    - zap-full-scan.py -t "${TARGET_URL}" -I -m 3 -j -J active_zap_report.json
+    - mv /zap/wrk/active_zap_report.json $CI_PROJECT_DIR/active_zap_report.json
+  artifacts:
+    paths:
+      - active_zap_report.json
+    expire_in: 1 week
